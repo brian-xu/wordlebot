@@ -39,6 +39,8 @@ function setLength() {
     let current = word_length;
     word_length = document.getElementById("word-length").value;
 
+    document.getElementById('word-known-answer').setAttribute('maxlength', word_length);
+    document.getElementById('word-known-answer').value = "";
     document.getElementById('word-entered').setAttribute('maxlength', word_length); 
     document.getElementById('word-entered').value = "";
     // clearHTML(document.getElementById('next-previous-buttons'));
@@ -99,13 +101,22 @@ function getBestOf(list) {
 function update() {
     let lists = getPotentialGuessesAndAnswers();
     let best_guesses = [];
+    let user_expected = "";
+
+    if (guessesMadeSoFar() > 1) {
+        let user_guess = getWord(guessesMadeSoFar() - 1);
+        let guess_stats = getBestGuesses(old_list.answers, [user_guess], old_list.unique, true);
+        user_expected = (guess_stats[0].average - guessesMadeSoFar()).toFixed(3);
+    }
+
+    old_list = lists;
 
     if (!timeToShowFinalOptions(lists.unique)) {
-        best_guesses = getBestGuesses(lists.answers, lists.guesses, lists.unique);
+        best_guesses = getBestGuesses(lists.answers, lists.guesses, lists.unique, true);
         best_guesses = removeUsedGuesses(best_guesses);
     }
 
-    updateLists(lists.answers, lists.unlikely, best_guesses);
+    updateLists(lists.answers, lists.unlikely, best_guesses, user_expected);
 }
 
 function removeUsedGuesses(list) {
@@ -266,26 +277,33 @@ function allCombinations(string, list) {
 // updates the headers to reflect how many words are left
 // adds those suggestions to the respective slides
 // creates a dropdown list showing all possible words
-function updateLists(likely_answers, unlikely_answers, best_guesses) {
+function updateLists(likely_answers, unlikely_answers, best_guesses, user_expected) {
+    let addendum = "";
+
+    if (user_expected) {
+        let user_guess = getWord(guessesMadeSoFar() - 1);
+        addendum = "Your expected score for the guess " + user_guess + " was " + user_expected + " guesses. ";
+    }
+
     let guess_list = writeBestGuessList(best_guesses);
 
     updateHeaders(bot.getAnswerListLength(likely_answers), bot.getAnswerListLength(unlikely_answers));
-    addToSlides("Your best possible guesses are:", guess_list);
+    addToSlides(addendum + "Your best possible guesses are:", guess_list);
     createAnswerDropdown(likely_answers, unlikely_answers);
     
     if (isEmpty(likely_answers) && isEmpty(unlikely_answers)) {
-        return addToSlides("", noWordsLeftMessage());
+        return addToSlides(addendum, noWordsLeftMessage());
     }
 
     if (timeToShowFinalOptions(likely_answers)) {
         // will only show the final two options as suggestions
         // ie: 'its either 'THIS' or 'THAT'
-        return showFinalOptions(likely_answers, unlikely_answers);
+        return showFinalOptions(likely_answers, unlikely_answers, addendum);
     } 
 
     let unfound_answers = getUnfoundAnswers(likely_answers);
     if (unfound_answers.length) {
-        addToSlides("", unfoundAnswersMessage(unfound_answers));
+        addToSlides(addendum, unfoundAnswersMessage(unfound_answers));
     }
 }
 
@@ -436,7 +454,7 @@ function unfoundAnswersMessage(unfound_answers) {
 // only called if there are less than two likely answers left
 // shows: almost certainly 'THIS' or 'THAT'
 // unlikely but it could be: 'SOMETHING', 'ELSE'
-function showFinalOptions(sorted, less_likely) {
+function showFinalOptions(sorted, less_likely, addendum) {
     let all_suggestions = [];
 
     if (bot.getCount() > 1) {
@@ -471,7 +489,7 @@ function showFinalOptions(sorted, less_likely) {
         all_suggestions.push(unlikely);
     }
 
-    addToSlides("", all_suggestions);
+    addToSlides(addendum, all_suggestions);
 }
 
 function printAnswer(answer) {
@@ -545,6 +563,10 @@ function getDifficulty() {
 
 function botIsOn() {
     return document.getElementById('results');
+}
+
+function setKnownAnswer(knownAnswer) {
+    bot.setAnswer(knownAnswer);
 }
 
 /* 
@@ -736,10 +758,10 @@ function setBestGuesses(best_guesses) {
     seconds[word][hash] = JSON.stringify(best_guesses.slice(0, TOP_TEN_LENGTH));
 }
 
-function getBestGuesses(answer_list, guess_list, unique_answers) {
+function getBestGuesses(answer_list, guess_list, unique_answers, force_recompute=false) {
     let best_guesses = guessesArePrecomputed();
     
-    if (best_guesses) { 
+    if (best_guesses && !force_recompute) { 
         return sortByWrongThenAverage(best_guesses);
     }
 

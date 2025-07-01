@@ -38,6 +38,18 @@ $(document).ready(function() {
         update();
     });
 
+    $("#word-known-answer").on('input', function(e) {
+        let val = $("#word-known-answer").val();
+        if (val.length == word_length) {
+            $("#word-known-answer").blur();
+
+            setKnownAnswer(val);
+
+            if (word_length == 11) {
+                $(".tile").css('font-size', '1rem');
+            }
+        }
+    });
     
     $("#word-entered").on('input', function(e) {
         let val = $("#word-entered").val();
@@ -136,6 +148,7 @@ function drawPage() {
     createMainHeader(header);
     createWordLengthSelector();
     
+    createKnownAnswerInput(container);
     createGuessInput(container);
     createAnswerSuggestions(container);
     
@@ -380,14 +393,19 @@ function createSettingsPage() {
     });
 }
 
-function createGuessInput(div) {
-    let input = document.getElementById('word-entered');
-    setInputAttributes(input);
+function createKnownAnswerInput(div) {
+    let input = document.getElementById('word-known-answer');
+    setInputAttributes(input, 'enter known answer');
 }
 
-function setInputAttributes(input) {
+function createGuessInput(div) {
+    let input = document.getElementById('word-entered');
+    setInputAttributes(input, 'enter guess here');
+}
+
+function setInputAttributes(input, placeholder) {
     input.setAttribute('autocomplete', 'off');
-    input.setAttribute('placeholder', 'enter your guess here');
+    input.setAttribute('placeholder', placeholder);
     input.setAttribute('onkeypress', 'return /[a-z]/i.test(event.key)');
     input.setAttribute('oninput', 'this.value = this.value.toUpperCase()');
 }

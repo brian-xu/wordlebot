@@ -19,6 +19,11 @@ spotle = false;
 class Bot {
     constructor(type) {
         this.type = type;
+        this.answer = '';
+    }
+
+    setAnswer(answer) {
+        this.answer = answer;
     }
 
     isFor(type) {
@@ -188,7 +193,7 @@ class Bot {
 }
 
 function isHigher(a, b) {
-    return a > b;
+    return a > b;   
 }
 
 function isLower(a, b) {
@@ -198,6 +203,19 @@ function isLower(a, b) {
 // Wordle Specific Functions
 function tilesChangeColor(row) {
     let tiles = row.getElementsByClassName('tile');
+
+    let colors = [];
+    if (bot.answer && bot.answer.length == tiles.length) {
+
+        let guess = '';
+        for (let tile of tiles) {
+            guess += tile.textContent;
+        }
+        colors = bot.getDifference(guess, bot.answer);
+        for (let i = 0; i < colors.length; i++) {
+            setTileColor(tiles[i], colors[i]);
+        }
+    }
 
     Array.from(tiles).forEach(function(t) {
       t.addEventListener('click', function() {
@@ -212,6 +230,12 @@ function tilesChangeColor(row) {
     });
 }
 
+function setTileColor(tile, new_color) {
+    let old_color = getTileColor(tile);
+    if (old_color != new_color) {
+        tile.classList.replace(old_color, new_color);
+    }
+ }
 
 function changeTileColor(tile) {
     let old_color = getTileColor(tile);
@@ -682,9 +706,6 @@ function calculateAverageBucketSize(guess, answers, min, future_guess) {
         }
 
         adjusted = (1-threes)*weighted;
-        if (!bot.isFor(ANTI) && (adjusted > min && future_guess || adjusted > min*SIZE_FACTOR)) {
-            return;
-        }
     }
     let bucket_data = {word: guess, weighted: weighted, threes: threes, adjusted: adjusted, differences: differences};
     return bucket_data;
